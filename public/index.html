@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mijn Assistent v2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" onerror="window.__supabaseLoadFailed=true"></script>
+<style>
+:root {
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#ededea;
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.2);
+  --accent:#1D9E75;--accent-bg:#E1F5EE;--accent-text:#085041;
+  --warn-bg:#FAEEDA;--warn-text:#633806;
+  --danger-bg:#FCEBEB;--danger-text:#791F1F;
+  --info-bg:#E6F1FB;--info-text:#0C447C;
+  --purple-bg:#EEEDFE;--purple-text:#3C3489;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+    --text:#f0ede8;--text2:#a8a8a2;--text3:#6b6b67;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+    --accent-bg:#04342C;--accent-text:#9FE1CB;
+    --warn-bg:#412402;--warn-text:#FAC775;
+    --danger-bg:#501313;--danger-text:#F7C1C1;
+    --info-bg:#042C53;--info-text:#B5D4F4;
+    --purple-bg:#26215C;--purple-text:#CECBF6;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:15px}
+#app{display:flex;height:100dvh;max-width:960px;margin:0 auto;background:var(--bg)}
+#sidebar{width:210px;border-right:0.5px solid var(--border);display:flex;flex-direction:column;background:var(--bg2);padding:16px 8px 12px;gap:2px;flex-shrink:0}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#panel{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.app-title{font-size:12px;font-weight:500;color:var(--text3);padding:0 10px 10px;letter-spacing:0.05em}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-size:14px;cursor:pointer;text-align:left;width:100%}
+.nav-btn.active,.nav-btn:hover{background:var(--bg);color:var(--text)}
+.nav-btn .ti{font-size:17px}
+.badge{margin-left:auto;background:var(--danger-bg);color:var(--danger-text);font-size:11px;padding:1px 6px;border-radius:10px;font-weight:500}
+.nav-spacer{flex:1}
+.date-label{font-size:11px;color:var(--text3);padding:4px 10px}
+#bottom-nav{display:none;border-top:0.5px solid var(--border);background:var(--bg2);padding:6px 0 env(safe-area-inset-bottom)}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;color:var(--text3);font-size:10px;cursor:pointer;flex:1;padding:6px 0}
+.bnav-btn .ti{font-size:22px}
+.bnav-btn.active{color:var(--accent)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--bg2);border-radius:var(--radius);padding:12px;text-align:center}
+.stat .num{font-size:20px;font-weight:500;color:var(--text)}
+.stat .num.red{color:#D85A30}
+.stat .lbl{font-size:11px;color:var(--text2);margin-top:3px}
+.section-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:10px}
+.item-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px}
+.check{width:19px;height:19px;border:1.5px solid var(--border2);border-radius:4px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.check.done{background:var(--accent);border-color:var(--accent);color:#fff}
+.item-label{flex:1;font-size:14px;color:var(--text);min-width:0}
+.item-label.done{text-decoration:line-through;color:var(--text3)}
+.item-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;flex-shrink:0;font-weight:500}
+.tag-urgent{background:var(--danger-bg);color:var(--danger-text)}
+.tag-work{background:var(--info-bg);color:var(--info-text)}
+.tag-habit{background:var(--accent-bg);color:var(--accent-text)}
+.tag-pending{background:var(--warn-bg);color:var(--warn-text)}
+.tag-paid{background:var(--accent-bg);color:var(--accent-text)}
+.tag-invoice{background:var(--purple-bg);color:var(--purple-text)}
+.pay-amount{font-size:14px;font-weight:500;color:var(--text);flex-shrink:0}
+.source-pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg3);color:var(--text2);border:0.5px solid var(--border);margin-right:4px}
+.habit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.habit-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px}
+.habit-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px}
+.dot-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--border2);transition:background 0.15s}
+.dot.done{background:var(--accent)}
+.dot-lbl{font-size:9px;color:var(--text3)}
+#chat-area{border-top:0.5px solid var(--border);display:flex;flex-direction:column}
+#messages{height:155px;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;-webkit-overflow-scrolling:touch}
+.msg{max-width:82%;padding:8px 11px;border-radius:12px;font-size:13px;line-height:1.5}
+.msg.user{background:var(--info-bg);color:var(--info-text);align-self:flex-end;border-bottom-right-radius:4px}
+.msg.ai{background:var(--bg2);color:var(--text);align-self:flex-start;border:0.5px solid var(--border);border-bottom-left-radius:4px}
+.msg.ai.loading{color:var(--text3);font-style:italic}
+#input-row{display:flex;gap:8px;padding:8px 12px 12px}
+#user-input{flex:1;border:0.5px solid var(--border2);border-radius:var(--radius);padding:9px 12px;font-size:14px;background:var(--bg);color:var(--text);outline:none;font-family:inherit}
+#user-input:focus{border-color:var(--accent)}
+#send-btn{border:none;background:var(--accent);border-radius:var(--radius);padding:9px 14px;cursor:pointer;color:#fff;font-size:15px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.add-btn{font-size:13px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--radius);padding:6px 11px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:5px}
+.add-btn:hover{background:var(--bg2)}
+.btn-row{display:flex;gap:6px}
+.export-btn{display:flex;align-items:center;gap:5px;font-size:13px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--radius);padding:6px 11px;cursor:pointer;color:var(--text)}
+.export-btn:hover{background:var(--bg2)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:flex-end;justify-content:center;z-index:100}
+.modal{background:var(--bg);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:14px;color:var(--text)}
+.modal input,.modal select,.modal textarea{width:100%;border:0.5px solid var(--border2);border-radius:var(--radius);padding:9px 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;margin-bottom:10px;outline:none}
+.modal textarea{resize:vertical;min-height:70px}
+.modal-btns{display:flex;gap:8px;margin-top:4px}
+.modal-btns button{flex:1;padding:10px;border-radius:var(--radius);border:0.5px solid var(--border2);font-size:14px;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)!important}
+.btn-cancel{background:var(--bg2);color:var(--text)}
+.receipt-preview{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;font-size:13px;color:var(--text2)}
+.receipt-preview img{width:100%;max-height:160px;object-fit:cover;border-radius:6px;margin-bottom:8px}
+.receipt-result{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.receipt-field{background:var(--bg);border-radius:6px;padding:7px 10px}
+.receipt-field .rf-label{font-size:10px;color:var(--text3);margin-bottom:2px}
+.receipt-field .rf-val{font-size:13px;font-weight:500;color:var(--text)}
+.scan-zone{border:1.5px dashed var(--border2);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;margin-bottom:10px;transition:background 0.15s}
+.scan-zone:hover{background:var(--bg2)}
+.scan-zone .ti{font-size:32px;color:var(--text3);display:block;margin-bottom:6px}
+.scan-zone p{font-size:13px;color:var(--text2)}
+.invoice-total{font-size:22px;font-weight:500;color:var(--text);margin-bottom:4px}
+.invoice-sub{font-size:12px;color:var(--text2)}
+.cal-info{background:var(--info-bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--info-text);display:flex;gap:10px;align-items:flex-start}
+.cal-info .ti{font-size:18px;flex-shrink:0;margin-top:1px}
+#auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.auth-box{width:100%;max-width:340px}
+.auth-box h2{font-size:20px;margin-bottom:4px}
+.auth-box p.sub{font-size:13px;color:var(--text2);margin-bottom:18px}
+.auth-box input{width:100%;border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 12px;font-size:14px;background:var(--bg2);color:var(--text);margin-bottom:10px;outline:none;font-family:inherit}
+.auth-box button{width:100%;padding:11px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;font-size:14px;cursor:pointer;margin-top:4px}
+.auth-toggle{text-align:center;margin-top:14px;font-size:13px;color:var(--text2);cursor:pointer}
+.auth-error{font-size:12px;color:var(--danger-text);margin-top:6px;min-height:14px}
+.topbar{display:none;align-items:center;justify-content:flex-end;padding:8px 12px 0}
+.logout-btn{font-size:12px;color:var(--text2);background:none;border:none;cursor:pointer}
+@media(max-width:600px){
+  #sidebar{display:none}
+  #bottom-nav{display:flex}
+  #messages{height:120px}
+  .habit-grid{grid-template-columns:1fr}
+  .stats-row{gap:6px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / REGISTRATIE -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h2>Mijn Assistent</h2>
+    <p class="sub" id="auth-sub">Log in om je eigen agenda &amp; financieel overzicht te openen.</p>
+    <input id="auth-email" type="email" placeholder="E-mailadres" autocomplete="username"/>
+    <input id="auth-pass" type="password" placeholder="Wachtwoord" autocomplete="current-password"/>
+    <button onclick="authSubmit()" id="auth-submit-btn">Inloggen</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-toggle" id="auth-toggle" onclick="toggleAuthMode()">Nog geen account? Registreren</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div id="sidebar">
+    <div class="app-title">MIJN ASSISTENT</div>
+    <button class="nav-btn active" onclick="showTab('overview')" id="tab-overview"><i class="ti ti-layout-dashboard"></i> Overzicht</button>
+    <button class="nav-btn" onclick="showTab('todos')" id="tab-todos"><i class="ti ti-checklist"></i> To-do's <span class="badge" id="todo-badge">0</span></button>
+    <button class="nav-btn" onclick="showTab('invoice')" id="tab-invoice"><i class="ti ti-file-invoice"></i> Te factureren <span class="badge" id="inv-badge" style="background:var(--purple-bg);color:var(--purple-text)">0</span></button>
+    <button class="nav-btn" onclick="showTab('payments')" id="tab-payments"><i class="ti ti-credit-card"></i> Betalingen <span class="badge" id="pay-badge">0</span></button>
+    <button class="nav-btn" onclick="showTab('receipts')" id="tab-receipts"><i class="ti ti-camera"></i> Bonnetjes</button>
+    <button class="nav-btn" onclick="showTab('habits')" id="tab-habits"><i class="ti ti-repeat"></i> Habits</button>
+    <button class="nav-btn" onclick="showTab('calendar')" id="tab-calendar"><i class="ti ti-calendar"></i> Agenda</button>
+    <div class="nav-spacer"></div>
+    <button class="nav-btn" onclick="logout()"><i class="ti ti-logout"></i> Uitloggen</button>
+    <div class="date-label" id="sidebar-date"></div>
+  </div>
+
+  <div id="main">
+    <div class="topbar" id="topbar-mobile">
+      <button class="logout-btn" onclick="logout()">Uitloggen</button>
+    </div>
+    <div id="panel">
+
+      <!-- OVERZICHT -->
+      <div id="view-overview">
+        <div class="stats-row">
+          <div class="stat"><div class="num" id="stat-open">0</div><div class="lbl">Open taken</div></div>
+          <div class="stat"><div class="num red" id="stat-pay">€ 0</div><div class="lbl">Te betalen</div></div>
+          <div class="stat"><div class="num" id="stat-inv" style="color:var(--purple-text)">€ 0</div><div class="lbl">Te factureren</div></div>
+        </div>
+        <div class="section-title">Prioriteit vandaag</div>
+        <div id="overview-todos"></div>
+        <div style="margin-top:14px" class="section-title">Openstaande betalingen</div>
+        <div id="overview-payments"></div>
+        <div style="margin-top:14px" class="section-title">Te factureren</div>
+        <div id="overview-invoice"></div>
+      </div>
+
+      <!-- TO-DO'S -->
+      <div id="view-todos" style="display:none">
+        <div class="toolbar">
+          <span class="section-title" style="margin:0">To-do's</span>
+          <button class="add-btn" onclick="openModal('todo-modal')"><i class="ti ti-plus"></i> Toevoegen</button>
+        </div>
+        <div id="todo-list"></div>
+      </div>
+
+      <!-- TE FACTUREREN -->
+      <div id="view-invoice" style="display:none">
+        <div class="toolbar">
+          <span class="section-title" style="margin:0">Te factureren</span>
+          <div class="btn-row">
+            <button class="export-btn" onclick="exportInvoiceCSV()"><i class="ti ti-table-export"></i> CSV</button>
+            <button class="add-btn" onclick="openModal('inv-modal')"><i class="ti ti-plus"></i> Toevoegen</button>
+          </div>
+        </div>
+        <div id="inv-list"></div>
+      </div>
+
+      <!-- BETALINGEN -->
+      <div id="view-payments" style="display:none">
+        <div class="toolbar">
+          <span class="section-title" style="margin:0">Betalingen</span>
+          <div class="btn-row">
+            <button class="export-btn" onclick="exportPayCSV()"><i class="ti ti-table-export"></i> CSV</button>
+            <button class="add-btn" onclick="openModal('pay-modal')"><i class="ti ti-plus"></i> Toevoegen</button>
+          </div>
+        </div>
+        <div id="payment-list"></div>
+      </div>
+
+      <!-- BONNETJES -->
+      <div id="view-receipts" style="display:none">
+        <div class="toolbar">
+          <span class="section-title" style="margin:0">Bonnetjes scannen</span>
+        </div>
+        <div class="scan-zone" onclick="document.getElementById('receipt-input').click()">
+          <i class="ti ti-camera-plus"></i>
+          <p>Tik hier of sleep een foto van je bonnetje</p>
+          <p style="font-size:11px;color:var(--text3);margin-top:4px">AI leest bedrag, datum en leverancier automatisch uit</p>
+        </div>
+        <input type="file" id="receipt-input" accept="image/*" capture="environment" style="display:none" onchange="scanReceipt(this)">
+        <div id="receipt-preview" style="display:none"></div>
+        <div class="section-title" style="margin-top:16px">Gescande bonnetjes</div>
+        <div id="receipt-list"></div>
+      </div>
+
+      <!-- HABITS -->
+      <div id="view-habits" style="display:none">
+        <div class="toolbar">
+          <span class="section-title" style="margin:0">Dagelijkse habits</span>
+          <button class="add-btn" onclick="openModal('habit-modal')"><i class="ti ti-plus"></i> Toevoegen</button>
+        </div>
+        <div class="habit-grid" id="habit-grid"></div>
+      </div>
+
+      <!-- AGENDA -->
+      <div id="view-calendar" style="display:none">
+        <div class="section-title">Agenda koppeling</div>
+        <div class="cal-info">
+          <i class="ti ti-info-circle"></i>
+          <div>Google Agenda-koppeling wordt in een volgende stap toegevoegd. Voor nu kan je je taken exporteren als agenda-bestand (.ics) en importeren in Google of Outlook.</div>
+        </div>
+        <div class="section-title">Taken inplannen via ICS</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Exporteer je taken als agenda bestand — importeer dit in Google of Outlook.</p>
+        <button class="add-btn" style="width:100%;justify-content:center;padding:10px" onclick="exportICS()">
+          <i class="ti ti-calendar-export"></i> Taken exporteren als agenda bestand (.ics)
+        </button>
+        <div style="margin-top:16px" class="section-title">Geplande taken</div>
+        <div id="planned-list"></div>
+      </div>
+
+    </div>
+
+    <!-- CHAT -->
+    <div id="chat-area">
+      <div id="messages">
+        <div class="msg ai">Hallo! Ik ben je assistent. Typ wat je wil toevoegen — een taak, factuur, bonnetje of vraag me je dag te plannen. 💪</div>
+      </div>
+      <div id="input-row">
+        <input id="user-input" type="text" placeholder="Bijv: prestatie klant ABC 3u €150 nog te factureren..." autocomplete="off"/>
+        <button id="send-btn" onclick="sendMsg()"><i class="ti ti-send"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-nav">
+    <button class="bnav-btn active" onclick="showTab('overview')" id="btab-overview"><i class="ti ti-layout-dashboard"></i>Overzicht</button>
+    <button class="bnav-btn" onclick="showTab('todos')" id="btab-todos"><i class="ti ti-checklist"></i>Taken</button>
+    <button class="bnav-btn" onclick="showTab('receipts')" id="btab-receipts"><i class="ti ti-camera"></i>Scan</button>
+    <button class="bnav-btn" onclick="showTab('payments')" id="btab-payments"><i class="ti ti-credit-card"></i>Betaling</button>
+    <button class="bnav-btn" onclick="showTab('invoice')" id="btab-invoice"><i class="ti ti-file-invoice"></i>Factuur</button>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="todo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <h3>Nieuwe taak</h3>
+    <input id="todo-text" type="text" placeholder="Omschrijving..."/>
+    <select id="todo-tag"><option value="work">Werk</option><option value="urgent">Urgent</option><option value="habit">Habit</option></select>
+    <input id="todo-due" type="date"/>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('todo-modal')">Annuleer</button>
+      <button class="btn-primary" onclick="saveTodo()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div id="inv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <h3>Te factureren prestatie</h3>
+    <input id="inv-client" type="text" placeholder="Klant..."/>
+    <textarea id="inv-desc" placeholder="Omschrijving werk..."></textarea>
+    <input id="inv-amount" type="number" placeholder="Bedrag (€)" min="0" step="0.01"/>
+    <input id="inv-hours" type="number" placeholder="Uren (optioneel)" min="0" step="0.5"/>
+    <input id="inv-date" type="date"/>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('inv-modal')">Annuleer</button>
+      <button class="btn-primary" onclick="saveInvoice()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div id="pay-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <h3>Nieuwe betaling</h3>
+    <input id="pay-who" type="text" placeholder="Leverancier..."/>
+    <input id="pay-amount" type="number" placeholder="Bedrag (€)" min="0" step="0.01"/>
+    <select id="pay-source">
+      <option value="email">E-mail</option>
+      <option value="pepol">Pepol</option>
+      <option value="ebox">e-Box</option>
+      <option value="bank">Bank</option>
+      <option value="cash">Cash</option>
+      <option value="post">Post</option>
+    </select>
+    <input id="pay-due" type="date"/>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('pay-modal')">Annuleer</button>
+      <button class="btn-primary" onclick="savePayment()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div id="habit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <h3>Nieuwe habit</h3>
+    <input id="habit-name" type="text" placeholder="Naam habit..."/>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('habit-modal')">Annuleer</button>
+      <button class="btn-primary" onclick="saveHabit()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
+// ====== SUPABASE CONFIG ======
+// Vul deze twee waarden in met je eigen Supabase-project (Project Settings -> API).
+// De "anon key" is bewust publiek/veilig om in browsercode te zetten; de echte
+// beveiliging gebeurt via Row Level Security policies (zie supabase_schema.sql).
+const SUPABASE_URL = 'https://iajavythdcrvojmnkvqm.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_oXDWbNB85ohMPD9hAsG4Dg_Oxm4hsxM';
+let supabase = null;
+let supabaseInitError = '';
+try{
+  if(!window.supabase || typeof window.supabase.createClient !== 'function'){
+    throw new Error('De Supabase-bibliotheek kon niet laden (controleer je internetverbinding of een adblocker/extensie).');
+  }
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}catch(e){
+  supabaseInitError = e.message || 'Onbekende fout bij het opstarten van Supabase.';
+  console.error('Supabase init fout:', e);
+}
+
+let state={todos:[],invoices:[],payments:[],habits:[],receipts:[]};
+let currentTab='overview';
+let authMode='login';
+let currentUser=null;
+
+if(supabaseInitError){
+  const errEl=document.getElementById('auth-error');
+  if(errEl){
+    errEl.style.color='var(--danger-text)';
+    errEl.textContent='Kan niet verbinden: '+supabaseInitError;
+  }
+}
+
+document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long'});
+
+// ====== AUTH ======
+function toggleAuthMode(){
+  authMode=authMode==='login'?'signup':'login';
+  document.getElementById('auth-submit-btn').textContent=authMode==='login'?'Inloggen':'Account aanmaken';
+  document.getElementById('auth-toggle').textContent=authMode==='login'?'Nog geen account? Registreren':'Al een account? Inloggen';
+  document.getElementById('auth-error').textContent='';
+}
+async function authSubmit(){
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-pass').value;
+  const errEl=document.getElementById('auth-error');
+  errEl.textContent='';
+  if(!email||!password){errEl.textContent='Vul e-mail en wachtwoord in.';return;}
+  if(!supabase){
+    errEl.style.color='var(--danger-text)';
+    errEl.textContent='Kan niet verbinden: '+(supabaseInitError||'Supabase is niet geladen. Herlaad de pagina.');
+    return;
+  }
+  try{
+    if(authMode==='login'){
+      const{error}=await supabase.auth.signInWithPassword({email,password});
+      if(error)throw error;
+    }else{
+      const{error}=await supabase.auth.signUp({email,password});
+      if(error)throw error;
+      errEl.style.color='var(--accent-text)';
+      errEl.textContent='Account aangemaakt! Check je e-mail indien bevestiging vereist is, of log nu in.';
+      return;
+    }
+    await onLoggedIn();
+  }catch(e){
+    errEl.style.color='var(--danger-text)';
+    errEl.textContent=e.message||'Inloggen mislukt.';
+  }
+}
+async function logout(){
+  await supabase.auth.signOut();
+  currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+async function onLoggedIn(){
+  const{data}=await supabase.auth.getUser();
+  currentUser=data.user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  await loadAllData();
+  updateStats();renderOverview();
+}
+async function checkSession(){
+  const{data}=await supabase.auth.getSession();
+  if(data.session){await onLoggedIn();}
+}
+checkSession();
+
+// ====== DATA LADEN VANUIT SUPABASE ======
+async function loadAllData(){
+  const uid=currentUser.id;
+  const[todos,invoices,payments,habits,receipts]=await Promise.all([
+    supabase.from('todos').select('*').order('created_at',{ascending:false}),
+    supabase.from('invoices').select('*').order('created_at',{ascending:false}),
+    supabase.from('payments').select('*').order('created_at',{ascending:false}),
+    supabase.from('habits').select('*').order('created_at',{ascending:true}),
+    supabase.from('receipts').select('*').order('created_at',{ascending:false}),
+  ]);
+  state.todos=(todos.data||[]).map(t=>({...t,due:t.due||''}));
+  state.invoices=(invoices.data||[]).map(i=>({...i,desc:i.description||'',date:i.date||''}));
+  state.payments=(payments.data||[]).map(p=>({...p,due:p.due||''}));
+  state.habits=(habits.data||[]).map(h=>({...h,days:h.days||[0,0,0,0,0,0,0]}));
+  state.receipts=(receipts.data||[]).map(r=>({...r,imageData:r.image_data}));
+}
+
+function srcIcon(s){return{pepol:'ti-file-invoice',ebox:'ti-mail-opened',email:'ti-mail',bank:'ti-building-bank',cash:'ti-cash',post:'ti-mail-forward'}[s]||'ti-receipt';}
+function fmt(d){if(!d)return'';try{return new Date(d).toLocaleDateString('nl-BE',{day:'numeric',month:'short'});}catch(e){return d;}}
+function openModal(id){document.getElementById(id).style.display='flex';}
+function closeModal(id){document.getElementById(id).style.display='none';}
+
+function renderTodoCard(t,container){
+  const d=document.createElement('div');d.className='item-card';
+  d.innerHTML=`<div class="check ${t.done?'done':''}" onclick="toggleTodo(${t.id})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
+    <div class="item-label ${t.done?'done':''}">${t.text}${t.due?`<div class="item-sub"><i class="ti ti-calendar-event" style="font-size:11px"></i> ${fmt(t.due)}</div>`:''}</div>
+    <span class="tag tag-${t.tag}">${{urgent:'urgent',habit:'habit',work:'werk'}[t.tag]}</span>
+    <i class="ti ti-trash" style="font-size:15px;color:var(--text3);cursor:pointer;flex-shrink:0" onclick="deleteTodo(${t.id})"></i>`;
+  container.appendChild(d);
+}
+
+function renderTodos(){
+  const l=document.getElementById('todo-list');l.innerHTML='';
+  state.todos.filter(t=>!t.done).forEach(t=>renderTodoCard(t,l));
+  const done=state.todos.filter(t=>t.done);
+  if(done.length){const s=document.createElement('div');s.style.cssText='font-size:12px;color:var(--text3);margin:10px 0 6px';s.textContent=`Afgerond (${done.length})`;l.appendChild(s);done.slice(0,4).forEach(t=>renderTodoCard(t,l));}
+}
+
+function renderInvoices(){
+  const l=document.getElementById('inv-list');l.innerHTML='';
+  state.invoices.forEach(inv=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ti-file-invoice" style="font-size:18px;color:var(--purple-text);flex-shrink:0"></i>
+      <div class="item-label"><b style="font-weight:500">${inv.client}</b><div class="item-sub">${inv.desc}${inv.hours?' · '+inv.hours+'u':''} · ${fmt(inv.date)}</div></div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="pay-amount">€ ${Number(inv.amount).toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <span class="tag ${inv.status==='invoiced'?'tag-paid':'tag-invoice'}" style="cursor:pointer" onclick="toggleInvoice(${inv.id})">${inv.status==='invoiced'?'gefactureerd':'te factureren'}</span>
+      </div>
+      <i class="ti ti-trash" style="font-size:15px;color:var(--text3);cursor:pointer;flex-shrink:0;margin-left:4px" onclick="deleteInvoice(${inv.id})"></i>`;
+    l.appendChild(d);
+  });
+}
+
+function renderPayments(){
+  const l=document.getElementById('payment-list');l.innerHTML='';
+  [...state.payments.filter(p=>p.status==='pending'),...state.payments.filter(p=>p.status==='paid')].forEach(p=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ${srcIcon(p.source)}" style="font-size:18px;color:var(--text2);flex-shrink:0"></i>
+      <div class="item-label">${p.who}<div class="item-sub"><span class="source-pill"><i class="ti ${srcIcon(p.source)}" style="font-size:10px"></i>${p.source}</span>${p.due?'Vervalt: '+fmt(p.due):''}</div></div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="pay-amount">€ ${Number(p.amount).toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <span class="tag ${p.status==='paid'?'tag-paid':'tag-pending'}" style="cursor:pointer" onclick="togglePay(${p.id})">${p.status==='paid'?'betaald':'openstaand'}</span>
+      </div>
+      <i class="ti ti-trash" style="font-size:15px;color:var(--text3);cursor:pointer;flex-shrink:0;margin-left:4px" onclick="deletePay(${p.id})"></i>`;
+    l.appendChild(d);
+  });
+}
+
+function renderHabits(){
+  const g=document.getElementById('habit-grid');g.innerHTML='';
+  state.habits.forEach(h=>{
+    const d=document.createElement('div');d.className='habit-card';
+    d.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="habit-name" style="margin:0">${h.name}</div>
+      <i class="ti ti-trash" style="font-size:14px;color:var(--text3);cursor:pointer" onclick="deleteHabit(${h.id})"></i>
+    </div>
+    <div style="display:flex;gap:5px">${DAYS.map((day,i)=>`<div class="dot-wrap" onclick="toggleHabit(${h.id},${i})"><div class="dot ${h.days[i]?'done':''}"></div><span class="dot-lbl">${day}</span></div>`).join('')}</div>`;
+    g.appendChild(d);
+  });
+}
+
+function renderReceipts(){
+  const l=document.getElementById('receipt-list');l.innerHTML='';
+  if(!state.receipts.length){l.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Nog geen bonnetjes gescand.</div>';return;}
+  state.receipts.forEach(r=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ti-receipt" style="font-size:18px;color:var(--text2);flex-shrink:0"></i>
+      <div class="item-label">${r.supplier||'Onbekend'}<div class="item-sub">${r.date?fmt(r.date):''} · ${r.category||'onkosten'}</div></div>
+      <div class="pay-amount">€ ${Number(r.amount||0).toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <i class="ti ti-trash" style="font-size:15px;color:var(--text3);cursor:pointer;flex-shrink:0" onclick="deleteReceipt(${r.id})"></i>`;
+    l.appendChild(d);
+  });
+}
+
+function renderPlanned(){
+  const l=document.getElementById('planned-list');if(!l)return;l.innerHTML='';
+  const planned=state.todos.filter(t=>t.due&&!t.done);
+  if(!planned.length){l.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Geen taken met deadline gepland.</div>';return;}
+  planned.sort((a,b)=>a.due.localeCompare(b.due)).forEach(t=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ti-calendar-event" style="font-size:16px;color:var(--text2);flex-shrink:0"></i>
+      <div class="item-label">${t.text}<div class="item-sub">${fmt(t.due)}</div></div>
+      <span class="tag tag-${t.tag}">${{urgent:'urgent',habit:'habit',work:'werk'}[t.tag]}</span>`;
+    l.appendChild(d);
+  });
+}
+
+function renderOverview(){
+  const ot=document.getElementById('overview-todos');ot.innerHTML='';
+  [...state.todos.filter(t=>!t.done&&t.tag==='urgent').slice(0,3),...state.todos.filter(t=>!t.done&&t.tag!=='urgent').slice(0,2)].forEach(t=>renderTodoCard(t,ot));
+  if(!ot.children.length)ot.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">Geen open taken — goed bezig! 🎉</div>';
+  const op=document.getElementById('overview-payments');op.innerHTML='';
+  state.payments.filter(p=>p.status==='pending').slice(0,3).forEach(p=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ${srcIcon(p.source)}" style="font-size:16px;color:var(--text2)"></i>
+      <div class="item-label">${p.who}<div class="item-sub">${p.due?fmt(p.due):''}</div></div>
+      <div class="pay-amount">€ ${Number(p.amount).toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`;
+    op.appendChild(d);
+  });
+  const oi=document.getElementById('overview-invoice');oi.innerHTML='';
+  state.invoices.filter(i=>i.status==='pending').slice(0,3).forEach(inv=>{
+    const d=document.createElement('div');d.className='item-card';
+    d.innerHTML=`<i class="ti ti-file-invoice" style="font-size:16px;color:var(--purple-text)"></i>
+      <div class="item-label">${inv.client}<div class="item-sub">${inv.desc}</div></div>
+      <div class="pay-amount">€ ${Number(inv.amount).toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`;
+    oi.appendChild(d);
+  });
+}
+
+function updateStats(){
+  const open=state.todos.filter(t=>!t.done).length;
+  const tePay=state.payments.filter(p=>p.status==='pending').reduce((a,p)=>a+Number(p.amount),0);
+  const teInv=state.invoices.filter(i=>i.status==='pending').reduce((a,i)=>a+Number(i.amount),0);
+  document.getElementById('stat-open').textContent=open;
+  document.getElementById('stat-pay').textContent='€ '+tePay.toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('stat-inv').textContent='€ '+teInv.toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('todo-badge').textContent=open;
+  document.getElementById('pay-badge').textContent=state.payments.filter(p=>p.status==='pending').length;
+  document.getElementById('inv-badge').textContent=state.invoices.filter(i=>i.status==='pending').length;
+}
+
+// ====== CRUD (Supabase) ======
+async function toggleTodo(id){
+  const t=state.todos.find(t=>t.id===id);if(!t)return;
+  t.done=!t.done;
+  await supabase.from('todos').update({done:t.done}).eq('id',id);
+  renderTodos();renderOverview();updateStats();
+}
+async function deleteTodo(id){
+  state.todos=state.todos.filter(t=>t.id!==id);
+  await supabase.from('todos').delete().eq('id',id);
+  renderTodos();renderOverview();updateStats();
+}
+async function togglePay(id){
+  const p=state.payments.find(p=>p.id===id);if(!p)return;
+  p.status=p.status==='paid'?'pending':'paid';
+  await supabase.from('payments').update({status:p.status}).eq('id',id);
+  renderPayments();renderOverview();updateStats();
+}
+async function deletePay(id){
+  state.payments=state.payments.filter(p=>p.id!==id);
+  await supabase.from('payments').delete().eq('id',id);
+  renderPayments();renderOverview();updateStats();
+}
+async function toggleInvoice(id){
+  const i=state.invoices.find(i=>i.id===id);if(!i)return;
+  i.status=i.status==='invoiced'?'pending':'invoiced';
+  await supabase.from('invoices').update({status:i.status}).eq('id',id);
+  renderInvoices();renderOverview();updateStats();
+}
+async function deleteInvoice(id){
+  state.invoices=state.invoices.filter(i=>i.id!==id);
+  await supabase.from('invoices').delete().eq('id',id);
+  renderInvoices();renderOverview();updateStats();
+}
+async function toggleHabit(id,di){
+  const h=state.habits.find(h=>h.id===id);if(!h)return;
+  h.days[di]=h.days[di]?0:1;
+  await supabase.from('habits').update({days:h.days}).eq('id',id);
+  renderHabits();
+}
+async function deleteHabit(id){
+  state.habits=state.habits.filter(h=>h.id!==id);
+  await supabase.from('habits').delete().eq('id',id);
+  renderHabits();
+}
+async function deleteReceipt(id){
+  state.receipts=state.receipts.filter(r=>r.id!==id);
+  await supabase.from('receipts').delete().eq('id',id);
+  renderReceipts();
+}
+
+async function saveTodo(){
+  const text=document.getElementById('todo-text').value.trim();if(!text)return;
+  const row={user_id:currentUser.id,text,tag:document.getElementById('todo-tag').value,done:false,due:document.getElementById('todo-due').value||null};
+  const{data}=await supabase.from('todos').insert(row).select().single();
+  state.todos.unshift({...data,due:data.due||''});
+  closeModal('todo-modal');document.getElementById('todo-text').value='';document.getElementById('todo-due').value='';
+  renderTodos();renderOverview();updateStats();
+}
+async function saveInvoice(){
+  const client=document.getElementById('inv-client').value.trim();
+  const amount=parseFloat(document.getElementById('inv-amount').value)||0;
+  if(!client)return;
+  const row={user_id:currentUser.id,client,description:document.getElementById('inv-desc').value.trim(),amount,hours:parseFloat(document.getElementById('inv-hours').value)||0,date:document.getElementById('inv-date').value||null,status:'pending'};
+  const{data}=await supabase.from('invoices').insert(row).select().single();
+  state.invoices.unshift({...data,desc:data.description||'',date:data.date||''});
+  closeModal('inv-modal');['inv-client','inv-desc','inv-amount','inv-hours','inv-date'].forEach(id=>document.getElementById(id).value='');
+  renderInvoices();renderOverview();updateStats();
+}
+async function savePayment(){
+  const who=document.getElementById('pay-who').value.trim();
+  const amount=parseFloat(document.getElementById('pay-amount').value)||0;
+  if(!who)return;
+  const row={user_id:currentUser.id,who,amount,source:document.getElementById('pay-source').value,status:'pending',due:document.getElementById('pay-due').value||null};
+  const{data}=await supabase.from('payments').insert(row).select().single();
+  state.payments.unshift({...data,due:data.due||''});
+  closeModal('pay-modal');['pay-who','pay-amount','pay-due'].forEach(id=>document.getElementById(id).value='');
+  renderPayments();renderOverview();updateStats();
+}
+async function saveHabit(){
+  const name=document.getElementById('habit-name').value.trim();if(!name)return;
+  const row={user_id:currentUser.id,name,days:[0,0,0,0,0,0,0]};
+  const{data}=await supabase.from('habits').insert(row).select().single();
+  state.habits.push(data);
+  closeModal('habit-modal');document.getElementById('habit-name').value='';
+  renderHabits();
+}
+
+// ====== BONNETJES SCANNEN (via /api/chat, key blijft op de server) ======
+async function scanReceipt(input){
+  const file=input.files[0];if(!file)return;
+  const preview=document.getElementById('receipt-preview');
+  preview.style.display='block';
+  preview.innerHTML=`<div class="receipt-preview"><img src="${URL.createObjectURL(file)}" alt="bonnetje"/><div style="color:var(--text2);font-size:13px;text-align:center;padding:8px 0"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> AI analyseert bonnetje...</div></div>`;
+
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(',')[1];
+    const mediaType=file.type||'image/jpeg';
+    try{
+      const res=await fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          max_tokens:400,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:'Analyseer dit bonnetje/factuur. Geef ALLEEN een JSON object terug (geen markdown, geen uitleg): {"supplier":"naam leverancier","amount":0.00,"date":"YYYY-MM-DD","category":"maaltijd|transport|materiaal|software|andere","description":"korte omschrijving"}'}
+          ]}]
+        })
+      });
+      const data=await res.json();
+      if(data.error)throw new Error(data.error.message||data.error);
+      const txt=(data.content||[]).map(b=>b.text||'').join('');
+      let parsed;
+      try{parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());}catch(e){parsed={supplier:'Onbekend',amount:0,date:'',category:'andere',description:''};}
+      const row={user_id:currentUser.id,supplier:parsed.supplier,amount:Number(parsed.amount)||0,date:parsed.date||null,category:parsed.category,description:parsed.description,image_data:e.target.result};
+      const{data:saved}=await supabase.from('receipts').insert(row).select().single();
+      state.receipts.unshift({...saved,imageData:saved.image_data});
+      preview.innerHTML=`<div class="receipt-preview">
+        <img src="${e.target.result}" alt="bonnetje"/>
+        <div class="receipt-result">
+          <div class="receipt-field"><div class="rf-label">Leverancier</div><div class="rf-val">${parsed.supplier||'?'}</div></div>
+          <div class="receipt-field"><div class="rf-label">Bedrag</div><div class="rf-val">€ ${Number(parsed.amount||0).toFixed(2)}</div></div>
+          <div class="receipt-field"><div class="rf-label">Datum</div><div class="rf-val">${fmt(parsed.date)||'?'}</div></div>
+          <div class="receipt-field"><div class="rf-label">Categorie</div><div class="rf-val">${parsed.category||'andere'}</div></div>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:8px;padding:9px;border-radius:var(--radius);border:none;cursor:pointer;font-size:14px" onclick="document.getElementById('receipt-preview').style.display='none';renderReceipts()">Opslaan</button>
+      </div>`;
+      renderReceipts();
+    }catch(err){
+      preview.innerHTML=`<div class="receipt-preview" style="color:var(--danger-text)">Fout bij scannen: ${err.message}</div>`;
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+// EXPORTS
+function exportPayCSV(){
+  const rows=[['Leverancier','Bedrag','Kanaal','Status','Vervaldatum']];
+  state.payments.forEach(p=>rows.push([p.who,Number(p.amount).toFixed(2),p.source,p.status==='paid'?'Betaald':'Openstaand',p.due||'']));
+  downloadCSV(rows,'betalingen');
+}
+function exportInvoiceCSV(){
+  const rows=[['Klant','Omschrijving','Bedrag','Uren','Datum','Status']];
+  state.invoices.forEach(i=>rows.push([i.client,i.desc,Number(i.amount).toFixed(2),i.hours||'',i.date||'',i.status==='invoiced'?'Gefactureerd':'Te factureren']));
+  downloadCSV(rows,'te_factureren');
+}
+function downloadCSV(rows,name){
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+function exportICS(){
+  const planned=state.todos.filter(t=>t.due&&!t.done);
+  if(!planned.length){alert('Geen taken met deadline om te exporteren.');return;}
+  let ics='BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mijn Assistent//NL\n';
+  planned.forEach(t=>{
+    const d=t.due.replace(/-/g,'');
+    ics+=`BEGIN:VEVENT\nUID:${t.id}@mijn-assistent\nDTSTART;VALUE=DATE:${d}\nDTEND;VALUE=DATE:${d}\nSUMMARY:${t.text}\nEND:VEVENT\n`;
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  a.download='taken.ics';a.click();
+}
+
+// TAB NAVIGATIE
+function showTab(tab){
+  currentTab=tab;
+  ['overview','todos','invoice','payments','receipts','habits','calendar'].forEach(t=>{
+    const v=document.getElementById('view-'+t);if(v)v.style.display=t===tab?'block':'none';
+    const nb=document.getElementById('tab-'+t);if(nb)nb.classList.toggle('active',t===tab);
+    const bb=document.getElementById('btab-'+t);if(bb)bb.classList.toggle('active',t===tab);
+  });
+  if(tab==='payments')renderPayments();
+  if(tab==='habits')renderHabits();
+  if(tab==='todos')renderTodos();
+  if(tab==='invoice')renderInvoices();
+  if(tab==='receipts')renderReceipts();
+  if(tab==='overview')renderOverview();
+  if(tab==='calendar')renderPlanned();
+}
+
+// ====== AI CHAT (via /api/chat, key blijft op de server) ======
+const msgHistory=[];
+function buildSystem(){
+  return `Je bent een persoonlijke productiviteitsassistent voor een zelfstandige ondernemer in België.
+Je helpt met to-do's, te factureren prestaties, betalingen (Pepol, e-Box, e-mail, bank, cash), habits, bonnetjes en agenda.
+
+Data:
+TODOS:${JSON.stringify(state.todos.slice(0,15))}
+TE FACTUREREN:${JSON.stringify(state.invoices.slice(0,10))}
+BETALINGEN:${JSON.stringify(state.payments.slice(0,15))}
+
+Acties via ACTION op aparte regel:
+ACTION:{"type":"add_todo","text":"...","tag":"work|urgent|habit","due":"YYYY-MM-DD of leeg"}
+ACTION:{"type":"add_payment","who":"...","amount":0,"source":"email|pepol|ebox|bank|cash|post","due":"YYYY-MM-DD of leeg"}
+ACTION:{"type":"add_invoice","client":"...","desc":"...","amount":0,"hours":0,"date":"YYYY-MM-DD"}
+ACTION:{"type":"mark_paid","id":0}
+ACTION:{"type":"mark_invoiced","id":0}
+ACTION:{"type":"toggle_todo","id":0}
+
+Antwoord kort en in het Nederlands.`;
+}
+
+async function sendMsg(){
+  const input=document.getElementById('user-input');
+  const text=input.value.trim();if(!text)return;
+  input.value='';
+  const msgs=document.getElementById('messages');
+  const ud=document.createElement('div');ud.className='msg user';ud.textContent=text;msgs.appendChild(ud);
+  const ld=document.createElement('div');ld.className='msg ai loading';ld.textContent='Denkt na...';msgs.appendChild(ld);
+  msgs.scrollTop=msgs.scrollHeight;
+  msgHistory.push({role:'user',content:text});
+  if(msgHistory.length>20)msgHistory.splice(0,2);
+  try{
+    const res=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({max_tokens:600,system:buildSystem(),messages:msgHistory})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||data.error);
+    const reply=(data.content||[]).map(b=>b.type==='text'?b.text:'').join('');
+    msgHistory.push({role:'assistant',content:reply});
+    const actions=[...reply.matchAll(/ACTION:(\{.*?\})/g)];
+    for(const m of actions){
+      try{
+        const a=JSON.parse(m[1]);
+        if(a.type==='add_todo'){
+          const{data:d}=await supabase.from('todos').insert({user_id:currentUser.id,text:a.text,tag:a.tag||'work',done:false,due:a.due||null}).select().single();
+          state.todos.unshift({...d,due:d.due||''});
+        }else if(a.type==='add_payment'){
+          const{data:d}=await supabase.from('payments').insert({user_id:currentUser.id,who:a.who,amount:Number(a.amount),source:a.source||'email',status:'pending',due:a.due||null}).select().single();
+          state.payments.unshift({...d,due:d.due||''});
+        }else if(a.type==='add_invoice'){
+          const{data:d}=await supabase.from('invoices').insert({user_id:currentUser.id,client:a.client,description:a.desc||'',amount:Number(a.amount),hours:Number(a.hours)||0,date:a.date||null,status:'pending'}).select().single();
+          state.invoices.unshift({...d,desc:d.description||'',date:d.date||''});
+        }else if(a.type==='mark_paid'){
+          const p=state.payments.find(p=>p.id===a.id);if(p){p.status='paid';await supabase.from('payments').update({status:'paid'}).eq('id',a.id);}
+        }else if(a.type==='mark_invoiced'){
+          const i=state.invoices.find(i=>i.id===a.id);if(i){i.status='invoiced';await supabase.from('invoices').update({status:'invoiced'}).eq('id',a.id);}
+        }else if(a.type==='toggle_todo'){
+          const t=state.todos.find(t=>t.id===a.id);if(t){t.done=!t.done;await supabase.from('todos').update({done:t.done}).eq('id',a.id);}
+        }
+      }catch(e){}
+    }
+    if(actions.length){renderOverview();renderTodos();renderPayments();renderInvoices();updateStats();}
+    ld.className='msg ai';ld.textContent=reply.replace(/ACTION:\{.*?\}/g,'').trim()||'Gedaan!';
+  }catch(err){
+    ld.className='msg ai';
+    ld.textContent='Fout: '+err.message;
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+document.getElementById('user-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendMsg();});
+document.getElementById('auth-pass').addEventListener('keydown',e=>{if(e.key==='Enter')authSubmit();});
+['todo-text','inv-client','habit-name'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){if(id==='todo-text')saveTodo();else if(id==='inv-client')saveInvoice();else if(id==='habit-name')saveHabit();}});
+});
+
+const style=document.createElement('style');
+style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
